@@ -1,0 +1,29 @@
+/* 
+ * AYrouT External Stylesheet
+ * All critical styles are inlined in index.html for performance.
+ * This file can be used for additional custom styles or overrides.
+ */
+
+/* Custom print styles for route export */
+@media print {
+
+    .control-panel,
+    .loading-overlay,
+    .toast,
+    .results-close,
+    .btn-group,
+    .audio-section {
+        display: none !important;
+    }
+
+    .results-panel {
+        position: static !important;
+        width: 100% !important;
+        max-height: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+    }
+}

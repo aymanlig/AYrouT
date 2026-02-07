@@ -1,0 +1,9 @@
+Flask==3.0.3
+osmnx==1.9.3
+networkx==3.3
+scikit-learn==1.5.1
+gtts==2.5.1
+folium==0.17.0
+geopy==2.4.1
+numpy==1.26.4
+requests==2.32.3

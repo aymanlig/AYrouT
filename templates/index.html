@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AYrouT - Debug Mode</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* إصلاح مشكل الطول والعرض */
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            background: #333;
+            /* لون رمادي باش نعرفو واش الخريطة كاينة */
+            z-index: 1;
+        }
+
+        .panel {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(21, 21, 21, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #444;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            color: white;
+            font-family: sans-serif;
+        }
+
+        input {
+            background: #000;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-go {
+            background: #4a9eff;
+            color: #000;
+        }
+
+        .btn-gps {
+            background: #4b4b4b;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="panel">
+        <div style="text-align:center; font-weight:bold; letter-spacing:2px; margin-bottom:5px;">AYrouT <span
+                style="color:#00d26a; font-size:10px;">● ONLINE</span></div>
+        <div class="row">
+            <input id="start" placeholder="Start Location">
+            <button class="btn-gps" onclick="gps()">📍</button>
+        </div>
+        <div class="row">
+            <input id="end" placeholder="Destination">
+            <button class="btn-go" onclick="route()">GO 🚀</button>
+        </div>
+        <div id="status" style="font-size:12px; color:#aaa; text-align:center;">Map loading...</div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Initialize Map
+        const MAP_CENTER = [30.4278, -9.5981];
+        var map = L.map('map').setView(MAP_CENTER, 13);
+
+        // 2. Load Standard OSM Tiles (باش نتأكدو أن الخريطة كتبان)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        console.log("Map initialized.");
+        document.getElementById('status').innerText = "Ready. Click on map to select points.";
+
+        // Variables
+        let startMarker, endMarker, routeLine;
+        let mode = 'start'; // start or end
+
+        // Click Handler
+        map.on('click', function (e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            if (mode === 'start') {
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = L.marker([lat, lng]).addTo(map);
+                document.getElementById('start').value = lat.toFixed(5) + ", " + lng.toFixed(5);
+                mode = 'end';
+                document.getElementById('status').innerText = "Select Destination point...";
+            } else {
+                if (endMarker) map.removeLayer(endMarker);
+                endMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'dest-icon', html: '🏁' }) }).addTo(map);
+                document.getElementById('end').value = lat.toFixed(5) + ", " + lng.toFixed(5);
+                mode = 'start';
+                document.getElementById('status').innerText = "Ready to Calculate Route.";
+            }
+        });
+
+        // GPS Function
+        function gps() {
+            document.getElementById('status').innerText = "Locating...";
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                var lat = pos.coords.latitude;
+                var lng = pos.coords.longitude;
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = L.marker([lat, lng]).addTo(map);
+                map.setView([lat, lng], 15);
+                document.getElementById('start').value = lat.toFixed(5) + ", " + lng.toFixed(5);
+                document.getElementById('status').innerText = "GPS Found. Select Destination.";
+                mode = 'end';
+            }, function () {
+                alert("GPS failed.");
+            });
+        }
+
+        // Route Function (Connects to Python)
+        async function route() {
+            const sVal = document.getElementById('start').value;
+            const eVal = document.getElementById('end').value;
+
+            if (!sVal || !eVal) {
+                alert("Please select both points on the map first!");
+                return;
+            }
+
+            const s = sVal.split(',');
+            const e = eVal.split(',');
+
+            document.getElementById('status').innerText = "Calculating Route...";
+
+            try {
+                const response = await fetch('/calculate_route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_lat: parseFloat(s[0]),
+                        start_lon: parseFloat(s[1]),
+                        end_lat: parseFloat(e[0]),
+                        end_lon: parseFloat(e[1])
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    if (routeLine) map.removeLayer(routeLine);
+                    routeLine = L.polyline(data.route_coordinates, { color: 'blue', weight: 5 }).addTo(map);
+                    map.fitBounds(routeLine.getBounds());
+                    document.getElementById('status').innerText = `Done! Distance: ${data.total_distance_km} km`;
+                } else {
+                    alert("Error: " + data.error_message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Server Error. Check console.");
+            }
+        }
+    </script>
+</body>
+
+</html>

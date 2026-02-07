@@ -1,0 +1,16 @@
+{
+  "city": "Agadir, Morocco",
+  "network_type": "drive",
+  "num_nodes": 12926,
+  "num_edges": 35157,
+  "bbox": {
+    "north": 30.4971044,
+    "south": 30.3518396,
+    "east": -9.4858722,
+    "west": -9.672934,
+    "center_lat": 30.412307388921555,
+    "center_lon": -9.563144550688534
+  },
+  "download_time_seconds": 20.7,
+  "downloaded_at": "2026-02-07 20:35:49"
+}
