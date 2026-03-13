@@ -273,4 +273,6 @@ if __name__ == "__main__":
         )
     else:
         print("FATAL: Engine failed to initialize.")
-        print("Run 'python download_graph.py' first to download the map data.")print("new one")
+        print("Run 'python download_graph.py' first to download the map data.")
+       
+ print("new one")
